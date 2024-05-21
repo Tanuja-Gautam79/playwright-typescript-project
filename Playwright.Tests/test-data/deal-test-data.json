@@ -1,0 +1,17 @@
+{
+    "TenantName": "aust",
+    "RepCompany": "Adcorp",
+    "Rep": "Adam Marcus",
+    "DealType": "Dexus - O&I",
+    "LeaseType": "Development",
+    "ExpectedTerm": "1",
+    "ExpectedStart": "12/12/2024",
+    "AreaReqMinValue": "1",
+    "AreaReqMaxValue": "1",
+    "Property": "56 Pitt Street, Sydney",
+    "TenantSource": "Direct",
+    "IntroducedBy": "Principal",
+    "Industry": "Accommodation and Food Services",
+    "SubIndustry": "Accommodation and food services",
+    "DealAdministrator": "Malika Mohan"
+}

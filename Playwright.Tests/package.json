@@ -1,0 +1,28 @@
+{
+    "name": "lms-test-automation",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "env:dev": "env-cmd --environments development npx playwright test",
+        "env:dev:externaluser": "env-cmd --environments development npx playwright test --grep @ExternalUser",
+        "env:dev:internaluser": "env-cmd --environments development npx playwright test --grep @InternalUser",
+        "env:stg": "env-cmd --environments staging npx playwright test",
+        "env:dev:ui": "env-cmd --environments development npx playwright test --ui",
+        "show:report": "npx playwright show-report"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@playwright/test": "^1.41.2",
+        "@types/node": "^20.11.19",
+        "env-cmd": "^10.1.0"
+    },
+    "dependencies": {
+        "docxtemplater": "^3.46.0",
+        "mammoth": "^1.6.0",
+        "pizzip": "^3.1.6",
+        "playwright": "^1.41.2"
+    }
+}
