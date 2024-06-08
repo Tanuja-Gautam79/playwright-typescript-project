@@ -1,0 +1,8 @@
+trigger:
+  - none
+
+stages:
+  - template: Templates/build-template.yml
+    parameters:
+      variableGroupName: "LMS-Core-Dev"
+      vmImageName: "windows-latest"

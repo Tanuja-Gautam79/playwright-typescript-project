@@ -1,0 +1,26 @@
+trigger:
+  branches:
+    include:
+      - develop
+  paths:
+    exclude:
+      - lms-negotiation/**
+      - pipelines/**
+
+variables:
+  - group: LMS-Core-Versions
+
+name: $(Dev-Version).$(Rev:r)
+
+stages:
+  - template: Templates/build-template.yml
+    parameters:
+      variableGroupName: "LMS-Core-Dev"
+      vmImageName: "windows-latest"
+
+  - template: Templates/release-template.yml
+    parameters:
+      variableGroupName: "LMS-Core-Dev"
+      azureSubscription: "LMS Service Connection - DEV/UAT"
+      environment: "Development"
+      vmImageName: "windows-latest"

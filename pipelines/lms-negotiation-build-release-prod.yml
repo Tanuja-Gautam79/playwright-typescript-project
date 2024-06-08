@@ -1,0 +1,26 @@
+trigger:
+  branches:
+    include:
+      - master
+  paths:
+    exclude:
+      - lms-core/**
+      - pipelines/**
+
+variables:
+  - group: LMS-Negotiation-Versions
+
+name: $(Prod-Version)
+
+stages:
+  - template: Templates/build-template.yml
+    parameters:
+      variableGroupName: "LMS-Negotiation-Prod"
+      vmImageName: "windows-latest"
+
+  - template: Templates/release-template.yml
+    parameters:
+      variableGroupName: "LMS-Negotiation-Prod"
+      azureSubscription: "LMS Service Connection - PROD"
+      environment: "Production"
+      vmImageName: "windows-latest"

@@ -1,0 +1,26 @@
+trigger:
+  branches:
+    include:
+      - refs/heads/release/*
+  paths:
+    exclude:
+      - lms-core/**
+      - pipelines/**
+
+variables:
+  - group: LMS-Negotiation-Versions
+
+name: $(Uat-Version).$(Rev:r)
+
+stages:
+  - template: Templates/build-template.yml
+    parameters:
+      variableGroupName: "LMS-Negotiation-Uat"
+      vmImageName: "windows-latest"
+
+  - template: Templates/release-template.yml
+    parameters:
+      variableGroupName: "LMS-Negotiation-Uat"
+      azureSubscription: "LMS Service Connection - DEV/UAT"
+      environment: "Staging"
+      vmImageName: "windows-latest"

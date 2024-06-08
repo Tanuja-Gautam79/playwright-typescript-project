@@ -1,0 +1,15 @@
+trigger: none
+
+# schedules:
+# - cron: '0 14 * * *' #Midnight Australia AEST time
+#   displayName: Daily midnight automation tests run
+#   branches:
+#     include:
+#     - develop
+
+stages:  
+  - template: Templates/run-automation-tests-template.yml
+    parameters:
+      variableGroupName: "LMS-Playwright-Tests-Dev"
+      environment: "Development"
+      vmImageName: "windows-latest"

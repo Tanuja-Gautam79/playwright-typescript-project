@@ -1,0 +1,140 @@
+parameters:
+  - name: variableGroupName
+  - name: azureSubscription
+  - name: environment
+  - name: vmImageName
+
+stages:
+  - stage: DeployWeb
+    displayName: "Deploy Web App"
+    variables:
+      - group: ${{ parameters.variableGroupName }}
+    jobs:
+      - deployment: Deploy
+        displayName: Deploy
+        environment: ${{ parameters.environment }}
+        pool:
+          vmImage: ${{ parameters.vmImageName }}
+        variables:
+          Release.EnvironmentName: ${{ parameters.environment }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: none
+
+                - task: DownloadBuildArtifacts@1
+                  displayName: "Download Web Build Artifacts"
+                  inputs:
+                    artifactName: drop
+                    itemPattern: "**/$(projectWebName).zip"
+                    extractTars: false
+
+                - task: Bash@3
+                  name: ADOAgentIP
+                  displayName: Get Azure DevOps Agent IP Address
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      ipaddress=$(curl -s http://ipinfo.io/ip)
+                      echo Azure DevOps Agent IP: $ipaddress
+                      echo "##vso[task.setvariable variable=address;isOutput=true;]$ipaddress"
+
+                - task: AzureCLI@2
+                  displayName: Add Azure DevOps Agent IP to Azure App Service Allow list
+                  inputs:
+                    azureSubscription: ${{ parameters.azureSubscription }}
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az account set --subscription $(azureSubscriptionID)
+                      az webapp config access-restriction add -g $(appServiceResourceGroupName) -n $(webAppServiceName) --rule-name ado-agent-azure-devops --action Allow --ip-address "$(ADOAgentIP.address)" --priority 200 --scm-site true
+
+                - task: AzureRmWebAppDeployment@4
+                  displayName: "Azure App Service Deploy: $(webAppServiceName)"
+                  inputs:
+                    azureSubscription: ${{ parameters.azureSubscription }}
+                    WebAppName: $(webAppServiceName)
+                    packageForLinux: "$(System.ArtifactsDirectory)/drop/$(projectWebName).zip"
+                    enableCustomDeployment: true
+                    TakeAppOfflineFlag: false
+                    enableXmlTransform: true
+
+                - task: AzureCLI@2
+                  displayName: Remove Azure DevOps Agent IP
+                  inputs:
+                    azureSubscription: ${{ parameters.azureSubscription }}
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az webapp config access-restriction remove -g $(appServiceResourceGroupName) -n $(webAppServiceName) --rule-name ado-agent-azure-devops --scm-site true
+
+  - stage: DeployAPI
+    displayName: "Deploy Api"
+    variables:
+      - group: ${{ parameters.variableGroupName }}
+    jobs:
+      - deployment: Deploy
+        displayName: Deploy
+        environment: ${{ parameters.environment }}
+        pool:
+          vmImage: ${{ parameters.vmImageName }}
+        variables:
+          Release.EnvironmentName: ${{ parameters.environment }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: none
+
+                - task: DownloadBuildArtifacts@1
+                  displayName: "Download Api Build Artifacts"
+                  inputs:
+                    artifactName: drop
+                    itemPattern: "**/$(projectApiName).zip"
+                    extractTars: false
+
+                - task: Bash@3
+                  name: ADOAgentIP
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      ipaddress=$(curl -s http://ipinfo.io/ip)
+                      echo Azure DevOps Agent IP: $ipaddress
+                      echo "##vso[task.setvariable variable=address;isOutput=true;]$ipaddress"                    
+
+                - task: AzureCLI@2
+                  displayName: Add Azure DevOps Agent IP to allow list
+                  inputs:
+                    azureSubscription: ${{ parameters.azureSubscription }}
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az account set --subscription $(azureSubscriptionID)
+                      az webapp config access-restriction add -g $(appServiceResourceGroupName) -n $(apiAppServiceName) --rule-name ado-agent-azure-devops --action Allow --ip-address "$(ADOAgentIP.address)" --priority 200 --scm-site true
+
+                - task: AzureAppServiceManage@0
+                  displayName: "Restart Azure App Service: $(apiAppServiceName)"
+                  inputs:
+                    azureSubscription: ${{ parameters.azureSubscription }}
+                    Action: "Restart Azure App Service"
+                    WebAppName: $(apiAppServiceName)                      
+
+                - task: AzureRmWebAppDeployment@4
+                  displayName: "Azure App Service Deploy: $(apiAppServiceName)"
+                  inputs:
+                    azureSubscription: ${{ parameters.azureSubscription }}
+                    WebAppName: $(apiAppServiceName)
+                    packageForLinux: "$(System.ArtifactsDirectory)/drop/$(projectApiName).zip"
+                    enableCustomDeployment: true
+                    TakeAppOfflineFlag: false
+                    enableXmlTransform: true
+
+                - task: AzureCLI@2
+                  displayName: Remove Azure DevOps Agent IP
+                  inputs:
+                    azureSubscription: ${{ parameters.azureSubscription }}
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az webapp config access-restriction remove -g $(appServiceResourceGroupName) -n $(apiAppServiceName) --rule-name ado-agent-azure-devops --scm-site true

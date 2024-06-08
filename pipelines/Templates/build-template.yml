@@ -1,0 +1,93 @@
+parameters:
+  - name: variableGroupName
+  - name: vmImageName
+
+stages:
+  - stage: RunTests
+    displayName: "Run Tests"
+    variables:
+      - group: ${{ parameters.variableGroupName }}
+    jobs:
+      - job: RunTests
+        pool:
+          vmImage: ${{ parameters.vmImageName }}
+        steps:
+          - task: DotNetCoreCLI@2
+            displayName: "Run API Unit Tests"
+            inputs:
+              command: test
+              projects: "$(solutionFolder)/**/*.csproj"
+              arguments: "--configuration $(buildConfiguration)"
+
+  - stage: BuildWeb
+    displayName: "Build Web"
+    variables:
+      - group: ${{ parameters.variableGroupName }}
+    jobs:
+      - job: BuildWeb
+        pool:
+          vmImage: ${{ parameters.vmImageName }}
+        variables:
+          workingDirectory: "$(Build.SourcesDirectory)/$(solutionFolder)/$(projectWebName)"
+          artifactFile: $(Build.ArtifactStagingDirectory)/$(projectWebName).zip
+        steps:
+          - powershell: $(solutionFolder)\$(projectWebName)\src\configuration\deploy.ps1 $(Build.BuildNumber) $(solutionFolder)
+          - task: NodeTool@0
+            inputs:
+              versionSpec: "18.x"
+            displayName: "Install Node.js"
+
+          - script: |
+              npm install -g @angular/cli && npm install
+            displayName: "npm install"
+            workingDirectory: $(workingDirectory)
+
+          - script: |
+              node --max_old_space_size=8192 node_modules/@angular/cli/bin/ng build --configuration $(webConfigurationName)
+            displayName: "npm build"
+            workingDirectory: $(workingDirectory)
+
+          - task: ArchiveFiles@2
+            displayName: "Archive files"
+            inputs:
+              rootFolderOrFile: "$(System.DefaultWorkingDirectory)/$(solutionFolder)/$(projectWebName)/dist/"
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(artifactFile)
+              replaceExistingArchive: true
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: $(artifactFile)
+              ArtifactName: "drop"
+              publishLocation: "Container"
+
+  - stage: BuildApi
+    displayName: "Build Api"
+    variables:
+      - group: ${{ parameters.variableGroupName }}
+    jobs:
+      - job: BuildApi
+        pool:
+          vmImage: ${{ parameters.vmImageName }}
+        variables:
+          solution: "$(solutionFolder)/*.sln"
+        steps:
+          - task: NuGetToolInstaller@1
+
+          - task: NuGetCommand@2
+            inputs:
+              restoreSolution: $(solution)
+
+          - task: VSBuild@1
+            inputs:
+              solution: $(solution)
+              msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\$(projectApiName).zip" /p:DeployIisAppPath="$(apiAppServiceName)" /t:$(projectApiName):Rebuild'
+              platform: "Any CPU"
+              configuration: $(buildConfiguration)
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: $(Build.ArtifactStagingDirectory)
+              ArtifactName: "drop"
+              publishLocation: "Container"
